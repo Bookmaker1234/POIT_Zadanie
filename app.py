@@ -5,6 +5,7 @@ import time
 import random
 import math
 import serial
+import json
 global s
 
 async_mode = None
@@ -22,10 +23,10 @@ def background_thread(args):
     global s
     s = 2
     while True:
-            if args:
-              A = dict(args).get('A')
-            else:
-              A = 1
+           # if args:
+           #   A = dict(args).get('A')
+         #   else:
+         #     A = 1
         
         #print (A)
         #print args
@@ -34,12 +35,32 @@ def background_thread(args):
                 ser.baudrate = 9600
                 socketio.sleep(1)
                 count += 1
-                while (s == 1):
-                    read_ser = ser.readline()
-                    print(read_ser.decode())
-                    socketio.emit('my_response',
-                                 {'data': read_ser.decode(), 'count': count},
-                                  namespace='/test')
+            while (s == 1):
+                count += 1
+                read_ser = ser.readline()
+                premenna = read_ser.decode().replace("\r\n","").split(",")
+                teplota = premenna[0]
+                vlhkost = premenna[1]
+                
+                dataDict= {
+                    "x": count,
+                    "teplota":teplota,
+                    "vlhkost":vlhkost
+                    }
+                
+               # dataList.append(dataDict)
+                
+                
+                socketio.emit('my_response',
+                              {'data': json.dumps({"teplota": teplota,"vlhkost": vlhkost}), 'count': count},
+                              namespace='/test')
+                socketio.emit('my_response2',
+                      {'data': teplota,'data1': vlhkost,'count': count},
+                      namespace='/test')
+                
+                socketio.emit('my_response3',
+                      {'data': teplota,'data1': vlhkost, 'count': count},
+                      namespace='/test')
             else:
                 socketio.sleep()
                 
@@ -66,10 +87,11 @@ def start_request():
 @socketio.on('stop_request', namespace='/test')
 def stop_request():
     global s
+    s = 0
     session['receive_count'] = session.get('receive_count', 0) + 1
     emit('my_response',
          {'data': 'Stop!', 'count': session['receive_count']})
-    s = 0
+    
 
 @socketio.on('disconnect_request', namespace='/test')
 def disconnect_request():
