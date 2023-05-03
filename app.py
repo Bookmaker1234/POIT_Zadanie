@@ -2,6 +2,8 @@ from threading import Lock
 from flask import Flask, render_template, session, request, jsonify, url_for
 from flask_socketio import SocketIO, emit, disconnect    
 import time
+import MySQLdb
+import configparser as ConfigParser
 import random
 import math
 import serial
@@ -18,8 +20,19 @@ socketio = SocketIO(app, async_mode=async_mode)
 thread = None
 thread_lock = Lock() 
 
+config = ConfigParser.ConfigParser()
+config.read('config.cfg')
+myhost = config.get('mysqlDB', 'host')
+myuser = config.get('mysqlDB', 'user')
+mypasswd = config.get('mysqlDB', 'passwd')
+mydb = config.get('mysqlDB', 'db')
+print(myhost)
+
 def background_thread(args):
     count = 0
+    dataCounter = 0
+    dataList = []
+    db = MySQLdb.connect(host=myhost,user=myuser,passwd=mypasswd,db=mydb)          
     global s
     s = 2
     while True:
@@ -37,23 +50,39 @@ def background_thread(args):
                 count += 1
             while (s == 1):
                 count += 1
+                dataCounter +=1
                 read_ser = ser.readline()
                 premenna = read_ser.decode().replace("\r\n","").split(",")
                 teplota = premenna[0]
                 vlhkost = premenna[1]
                 
-                dataDict= {
-                    "x": count,
-                    "teplota":teplota,
-                    "vlhkost":vlhkost
-                    }
-                
-               # dataList.append(dataDict)
-                
+                if s == 1:
+                    dataDict = {
+                        "t": time.time(),
+                        "x": dataCounter,
+                        "teplota": teplota,
+                        "vlhkost": vlhkost}
+                    dataList.append(dataDict)
+                elif s == 0:
+                    if len(dataList)>0:
+                        print(str(dataList))
+                        fuj = str(dataList).replace("'", "\"")
+                        print(fuj)
+                        fo = open("static/zapisovanie/databaza.txt","a+")
+                        fo.write("%s\r\n" %fuj)
+                        fo.close()
+                        cursor = db.cursor()
+                        cursor.execute("SELECT MAX(id) FROM merania")
+                        maxid = cursor.fetchone()
+                        cursor.execute("INSERT INTO merania (id, hodnoty) VALUES (%s, %s)", (maxid[0] + 1, fuj))
+                        db.commit()
+                    dataList = []
+                    dataCounter = 0
                 
                 socketio.emit('my_response',
                               {'data': json.dumps({"teplota": teplota,"vlhkost": vlhkost}), 'count': count},
                               namespace='/test')
+                
                 socketio.emit('my_response2',
                       {'data': teplota,'data1': vlhkost,'count': count},
                       namespace='/test')
@@ -67,7 +96,13 @@ def background_thread(args):
 @app.route('/')
 def index():
     return render_template('index.html', async_mode=socketio.async_mode)
-  
+
+@app.route('/citanie')
+def readall():
+    fo = open("static/zapisovanie/databaza.txt","r")
+    rows = fo.readlines()
+    return json.dumps(rows)
+
 @socketio.on('my_event', namespace='/test')
 def test_message(message):   
     session['receive_count'] = session.get('receive_count', 0) + 1 
@@ -83,6 +118,14 @@ def start_request():
     emit('my_response',
          {'data': 'Start!', 'count': session['receive_count']})
     s = 1
+
+@socketio.on('click_eventStart', namespace='/test')
+def db_message(message):
+    session['btn_value'] = 1
+    
+@socketio.on('click_eventStop', namespace='/test')
+def db_message(message):
+    session['btn_value'] = 0
     
 @socketio.on('stop_request', namespace='/test')
 def stop_request():
@@ -107,6 +150,12 @@ def test_connect():
         if thread is None:
             thread = socketio.start_background_task(target=background_thread, args=session._get_current_object())
     emit('my_response', {'data': 'Connected', 'count': 0})
+
+@app.route('/read/<string:num>')
+def readmyfile(num):
+    fo = open("static/zapisovanie/databaza.txt","r")
+    rows = fo.readlines()
+    return rows[int(num)-1]
 
 @socketio.on('disconnect', namespace='/test')
 def test_disconnect():
