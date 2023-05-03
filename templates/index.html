@@ -3,50 +3,289 @@
  <head>
   <title>Flask-SocketIO Test</title>
    <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
+   <script src="static/libs/plotly-latest.min.js"></script>
+   <script src="static/libs/gauge.min.js"></script>
    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.5/socket.io.min.js"></script>
+   <link rel="stylesheet" href="static/jquery-ui.min.css">
+    <script src="static/jquery-3.2.1.min.js"></script>
+    <script src="static/jquery-ui.min.js"></script>
    <script type="text/javascript" charset="utf-8">
      $(document).ready(function() {
+      rowNum = 4
+      $.ajax({
+      type: "GET",
+      url: "/read/"+String(rowNum),
+      success:function(data) 
+      { console.log(data);  
+        $("#databazapremenna").append(data); 
+        data = JSON.parse(data);
+        console.log(data);
+        n = Object.keys(data).length;
+        console.log(n);
+        
+        xl = [];
+        yl = [];
+        yl2 = [];
+
+        for (var i=0; i< n; i++){
+          x.push(data[i].x );
+          y.push(data[i].teplota);
+          y1.push(data[i].vlhkost); }
+        //let trace = [{
+            //x: xl,
+            //y: yl
+             //}
+               //];   
+          trace = {
+              x: x,
+              y: y,
+              name: 'Teplota'
+          };  
+          trace1 = {
+              x: x,
+              y: y1,
+              name: 'Vlhkost'
+          };       
+          layout = {
+            title: 'Data',
+            xaxis: {
+                title: 'x',
+            },
+            yaxis: {
+                title: 'y',
+                //range: [10,90]
+            }
+           }
+        var tracesP = new Array();
+        tracesP.push(trace);
+        var traces1P = new Array();
+        traces1P.push(trace1);
+        Plotly.newPlot($('#plotdiv1')[0], tracesP,traces1P, layout);
+        Plotly.addTraces(plotdiv,traces1P) 
+      }
+    }).done(function( o ) {
+       // do something
+    });
+      var gauge = new RadialGauge({
+          renderTo: 'canvasID',
+          width: 300,
+          height: 300,
+          units: "°C",
+          minValue: 0,
+          maxValue: 30,
+          majorTicks: [
+              "0",
+              "3",
+              "6",
+              "9",
+              "12",
+              "15",
+              "18",
+              "21",
+              "24",
+              "27",
+              "30"
+          ],
+          minorTicks: 2,
+          strokeTicks: true,
+          highlights: [
+              {
+                  "from": 15,
+                  "to": 30,
+                  "color": "rgba(200, 50, 50, .75)"
+              }
+          ],
+          colorPlate: "#fff",
+          borderShadowWidth: 0,
+          borders: false,
+          needleType: "arrow",
+          needleWidth: 2,
+          needleCircleSize: 7,
+          needleCircleOuter: true,
+          needleCircleInner: false,
+          animationDuration: 1500,
+          animationRule: "linear"
+      });
+      gauge.draw();
+      gauge.value = "0";
+      
+      var gauge1 = new RadialGauge({
+          renderTo: 'canvasID2',
+          width: 300,
+          height: 300,
+          units: "%",
+          minValue: 0,
+          maxValue: 100,
+          majorTicks: [
+              "0",
+              "10",
+              "20",
+              "30",
+              "40",
+              "50",
+              "60",
+              "70",
+              "80",
+              "90",
+              "100",
+          ],
+          minorTicks: 2,
+          strokeTicks: true,
+          highlights: [
+              {
+                  "from": 70,
+                  "to": 100,
+                  "color": "rgba(50, 50, 200, .75)"
+              }
+          ],
+          colorPlate: "#fff",
+          borderShadowWidth: 0,
+          borders: false,
+          needleType: "arrow",
+          needleWidth: 2,
+          needleCircleSize: 7,
+          needleCircleOuter: true,
+          needleCircleInner: false,
+          animationDuration: 1500,
+          animationRule: "linear"
+      });
+      gauge1.draw();
+      gauge1.value = "0";
+      var x = new Array();
+      var y = new Array();
+      var y1 = new Array();
+      var trace;
+      var layout;
       namespace = '/test';
       var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
 
+      $('form#start').submit(function(event) {
+          socket.emit('start_request');
+          return false; }); 
+      $('form#stop').submit(function(event) {
+          socket.emit('stop_request');
+          return false; });
       socket.on('connect', function() {
         socket.emit('my_event', {data: 'I\'m connected!', value: 1}); });
 
       socket.on('my_response', function(msg) {
         console.log(msg.data);
         $('#log').append('Received #'+msg.count+': '+msg.data+'<br>').html(); });
+      socket.on('my_response2', function(msg) {
+        console.log(msg.data);
+        $('#log2').append('Received #'+msg.count+': '+msg.data+'<br>' +msg.data1+'<br>').html(); 
+        x.push(parseFloat(msg.count));
+        y.push(parseFloat(msg.data));
+        trace = {
+            x: x,
+            y: y,
+            name: 'Teplota'
+        };  
+        y1.push(parseFloat(msg.data1));
+        trace1 = {
+            x: x,
+            y: y1,
+            name: 'Vlhkost'
+        };       
+        layout = {
+          title: 'Data',
+          xaxis: {
+              title: 'x',
+          },
+          yaxis: {
+              title: 'y',
+              range: [10,90]
+          }
+        };
+        console.log(trace);
+        console.log(trace1);
+        var traces = new Array();
+        traces.push(trace);
+        var traces1 = new Array();
+        traces1.push(trace1);
+        Plotly.newPlot($('#plotdiv')[0], traces,traces1, layout);
+        Plotly.addTraces(plotdiv,traces1)  
+        });
+      socket.on('my_response3', function(msg) {
+        console.log(msg.data);
+        $('#log3').append('Received #'+msg.count+': '+msg.data+'<br>' +msg.data1+'<br>').html(); 
+        gauge.value = msg.data; 
+        gauge1.value = msg.data1;                
+        });
 
       $('form#emit').submit(function(event) {
           socket.emit('my_event', {value: $('#emit_value').val()});
           return false; });
+      $('#buttonVal').click(function(event) {
+          //console.log($('#buttonVal').val());
+          socket.emit('click_event', {value: $('#buttonVal').val()});
+          return false; });
+      $('#sliderVal').change(function(event) {
+          console.log($('#sliderVal').val());
+          socket.emit('slider_event', {value: $('#sliderVal').val()});
+          return false; });
       $('form#disconnect').submit(function(event) {
           socket.emit('disconnect_request');
-          return false; });
-      $('form#start').submit(function(event) {
-          socket.emit('start_request');
-          return false; }); 
-      $('form#stop').submit(function(event) {
-          socket.emit('stop_request');
-          return false; }); 
+          return false; });  
+      $( function() {
+        $( "#tabs" ).tabs({
+          event: "click"
+        });
+      } );
       });
     </script>
  </head>
  <body>
-  <h1>Flask-SocketIO Test</h1>
+<div id="tabs">
+        <h1>POIT Zadanie</h1>
   <h2>Send:</h2>
   <form id="emit" method="POST" action='#'>
     <input type="submit" value="Open">
   </form>
-  <form id="disconnect" method="POST" action="#">
-    <input type="submit" value="Disconnect">
-  </form>
   <form id="start" method="POST" action="#">
     <input type="submit" value="Start">
    </form>
-  <form id="stop" method="POST" action="#">
+   <form id="stop" method="POST" action="#">
     <input type="submit" value="Stop">
-  </form> 
-  <h2>Receive:</h2>
-  <div id="log"></div>
+  <ul>
+        <li><a href="#tabs-1">Vypisovanie</a></li>
+        <li><a href="#tabs-2">Grafy</a></li>
+        <li><a href="#tabs-3">Ciferniky</a></li>
+        <li><a href="#tabs-4">Databazy</a></li>
+  </ul>
+    <div id="tabs-1">
+        <h2>Receive:</h2>
+        <div id="log"></div>
+        </div>
+    <div id="tabs-2">
+        <h1>Flask-SocketIO Test</h1>
+        <h2>Send:</h2>
+        <form id="emit" method="POST" action='#'>
+        <input type="text" name="emit_value" id="emit_value" placeholder="Amplituda">
+        <input type="submit" value="Send">
+        </form>
+        <button id="buttonVal" type="submit" value="send">Send value</button>
+        <form id="disconnect" method="POST" action="#">
+        <input type="submit" value="Disconnect">
+        </form> 
+        <div id="plotdiv" style="width:600px;height:250px;"></div>
+        <h2>Receive:</h2>
+        <div id="log2"></div>
+        </div>
+    <div id="tabs-3">
+        <h1>Flask-SocketIO Test</h1>
+        <form id="disconnect" method="POST" action="#">
+        <input type="submit" value="Disconnect">
+        </form> 
+        <canvas id="canvasID"></canvas>
+        <canvas id="canvasID2"></canvas>
+        <h2>Receive:</h2>
+        <div id="log3"></div>
+        </div>
+    <div id="tabs-4">
+        <h1>Flask-SocketIO Test</h1>
+        <div id= "databazapremenna" >
+        <div id=  "plotdiv1" style="width:600px;height:250px;"></div>
+        </div>
  </body>
 </html>
