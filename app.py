@@ -31,18 +31,19 @@ print(myhost)
 def background_thread(args):
     count = 0
     dataCounter = 0
+    global A
+    A = 1
     dataList = []
     db = MySQLdb.connect(host=myhost,user=myuser,passwd=mypasswd,db=mydb)          
     global s
     s = 2
     while True:
-           # if args:
-           #   A = dict(args).get('A')
-         #   else:
-         #     A = 1
+#             if args:
+#               A = dict(args).get('A')
+#             else:
+#               A = 100
+            
         
-        #print (A)
-        #print args
             if s == 1:
                 ser = serial.Serial("/dev/ttyS0")
                 ser.baudrate = 9600
@@ -55,7 +56,7 @@ def background_thread(args):
                 premenna = read_ser.decode().replace("\r\n","").split(",")
                 teplota = premenna[0]
                 vlhkost = premenna[1]
-                
+            
                 if s == 1:
                     dataDict = {
                         "t": time.time(),
@@ -76,11 +77,12 @@ def background_thread(args):
                         maxid = cursor.fetchone()
                         cursor.execute("INSERT INTO merania (id, hodnoty) VALUES (%s, %s)", (maxid[0] + 1, fuj))
                         db.commit()
+                    
                     dataList = []
                     dataCounter = 0
                 
                 socketio.emit('my_response',
-                              {'data': json.dumps({"teplota": teplota,"vlhkost": vlhkost}), 'count': count},
+                              {'data': json.dumps({"teplota": teplota,"vlhkost": vlhkost,"argument": float (A)}), 'count': count},
                               namespace='/test')
                 
                 socketio.emit('my_response2',
@@ -105,8 +107,9 @@ def readall():
 
 @socketio.on('my_event', namespace='/test')
 def test_message(message):   
-    session['receive_count'] = session.get('receive_count', 0) + 1 
-    session['A'] = message['value']    
+    session['receive_count'] = session.get('receive_count', 0) + 1
+    global A
+    A = message['value']    
     emit('my_response',
          {'data': message['value'], 'count': session['receive_count']})
 
