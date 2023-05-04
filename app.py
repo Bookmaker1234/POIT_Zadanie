@@ -95,11 +95,11 @@ def background_thread(args):
                         socketio.emit('my_response',
                                   {'data': json.dumps({"vlhkost": kontrola}), 'count': count},
                                   namespace='/test')
-                     
-                    socketio.emit('my_response',
-                          {'data': json.dumps({"teplota": teplota,"vlhkost": vlhkost,"argument": float (A)}), 'count': count},
-                          namespace='/test')
-                    
+                    else:
+                        socketio.emit('my_response',
+                              {'data': json.dumps({"teplota": teplota,"vlhkost": vlhkost,"argument": float (A)}), 'count': count},
+                              namespace='/test')
+                        
                     socketio.emit('my_response2',
                           {'data': teplota,'data1': vlhkost,'count': count},
                           namespace='/test')
