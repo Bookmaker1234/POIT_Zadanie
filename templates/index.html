@@ -11,7 +11,7 @@
     <script src="static/jquery-ui.min.js"></script>
    <script type="text/javascript" charset="utf-8">
      $(document).ready(function() {
-      rowNum = 4
+      rowNum = 0
       $.ajax({
       type: "GET",
       url: "/read/"+String(rowNum),
@@ -167,6 +167,12 @@
       $('form#stop').submit(function(event) {
           socket.emit('stop_request');
           return false; });
+      $('form#Begin').submit(function(event) {
+          socket.emit('Begin_request');
+          return false; });
+      $('form#End').submit(function(event) {
+          socket.emit('End_request');
+          return false; });
       socket.on('connect', function() {
         socket.emit('my_event', {data: 'I\'m connected!', value: 1}); });
 
@@ -214,21 +220,22 @@
         gauge.value = msg.data; 
         gauge1.value = msg.data1;                
         });
+        //socket.on('my_response4', function(msg) {
+        //console.log(msg.data);
+        //$('#log4').append('Received #'+msg.count+': '+msg.data+'<br>').html(); 
+        //rowNum = msg.data;
+        //});
 
       $('form#emit').submit(function(event) {
           socket.emit('my_event', {value: $('#emit_value').val()});
+          return false; });
+      $('form#emit1').submit(function(event) {
+          socket.emit('my_event1', {value: $('#emit_value1').val()});
           return false; });
       $('#buttonVal').click(function(event) {
           //console.log($('#buttonVal').val());
           socket.emit('click_event', {value: $('#buttonVal').val()});
           return false; });
-      $('#sliderVal').change(function(event) {
-          console.log($('#sliderVal').val());
-          socket.emit('slider_event', {value: $('#sliderVal').val()});
-          return false; });
-      $('form#disconnect').submit(function(event) {
-          socket.emit('disconnect_request');
-          return false; });  
       $( function() {
         $( "#tabs" ).tabs({
           event: "click"
@@ -245,11 +252,18 @@
     <input type="submit" value="Open">
   </form>
 -->
+<form id="Begin" method="POST" action="#">
+    <input type="submit" value="Begin">
+   </form>
+   <form id="End" method="POST" action="#">
+    <input type="submit" value="End">
+   </form>
   <form id="start" method="POST" action="#">
     <input type="submit" value="Start">
    </form>
-   <form id="stop" method="POST" action="#"></form>
+   <form id="stop" method="POST" action="#">
     <input type="submit" value="Stop">
+    </form>
   <ul>
         <li><a href="#tabs-1">Vypisovanie</a></li>
         <li><a href="#tabs-2">Grafy</a></li>
@@ -263,6 +277,7 @@
         </form>
         <h2>Receive:</h2>
         <div id="log"></div>
+      
         </div>
     <div id="tabs-2">
         <h1>Graf teploty a vlhkosti</h1>
@@ -296,7 +311,11 @@
         <div id="log3"></div>
         </div>
     <div id="tabs-4">
-        <h1>Vypis z databazy v subore</h1>
+      <h1>Vypis z riadku v databaze</h1>
+      <form id="emit1" method="POST" action="#">
+        <input type="text" name="emit_value1" id="emit_value1" placeholder="Riadok v databaze">
+        <input type="submit" value="Send">
+        </form>
         <div id= "databazapremenna" >
         <div id=  "plotdiv1" style="width:600px;height:250px;"></div>
         </div>
